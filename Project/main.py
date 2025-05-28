@@ -51,6 +51,6 @@ for query in queries:
     print(f"\n=== Answer to '{query}' ===")
     print(prediction)
 
-# Compute and print evaluation metrics (assuming text-based evaluation)
+# Compute and print evaluation metrics
 metrics = compute_metrics(y_true, y_pred)
 print_metrics(metrics)

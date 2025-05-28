@@ -19,12 +19,12 @@ def compute_metrics(y_true, y_pred):
 
     # BLEU Score
     bleu_scores = [sentence_bleu([t], p, smoothing_function=smoothie)
-                   for t, p in zip(tokenized_true, tokenized_pred)]
-    avg_bleu = sum(bleu_scores) / len(bleu_scores)
+                for t, p in zip(tokenized_true, tokenized_pred)]
+    avg_bleu = sum(bleu_scores) / len(bleu_scores) # type: ignore
 
     # Corrected METEOR Score line
     meteor_scores = [meteor_score([t], p)
-                     for t, p in zip(tokenized_true, tokenized_pred)]
+                for t, p in zip(tokenized_true, tokenized_pred)]
     avg_meteor = sum(meteor_scores) / len(meteor_scores)
 
     # ROUGE Score (original sentences)
