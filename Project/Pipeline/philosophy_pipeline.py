@@ -1,3 +1,5 @@
+import os
+import json
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 import faiss
@@ -46,6 +48,17 @@ class PhilosophyPipeline:
         self.index = faiss.IndexFlatL2(dimension)
         self.index.add(np.array(embeddings))
 
+    def save_index_and_metadata(self, index_path="embeddings/index.faiss", meta_path="embeddings/metadata.json"):
+        os.makedirs(os.path.dirname(index_path), exist_ok=True)
+        faiss.write_index(self.index, index_path)
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(self.metadata, f, indent=2)
+
+    def load_index_and_metadata(self, index_path="embeddings/index.faiss", meta_path="embeddings/metadata.json"):
+        self.index = faiss.read_index(index_path)
+        with open(meta_path, "r", encoding="utf-8") as f:
+            self.metadata = json.load(f)
+
     def retrieve_context(self, query, top_k=3):
         query_vec = self.embedding_model.encode([query])
         distances, indices = self.index.search(np.array(query_vec), top_k)
@@ -55,6 +68,8 @@ class PhilosophyPipeline:
         context_chunks, _ = self.retrieve_context(user_query)
         context = "\n".join(context_chunks)
         return f"""Context: \n\n{context}\n\nQuestion: \n\n{user_query}\n\nAnswer:\n\n"""
+
+
 
 
 
