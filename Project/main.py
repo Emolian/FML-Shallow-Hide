@@ -3,7 +3,7 @@ import contextlib
 from llama_cpp import Llama
 
 from Pipeline.philosophy_pipeline import PhilosophyPipeline
-
+from Evaluator.metrics import compute_metrics, print_metrics
 
 # Get base dir where main.py is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -18,9 +18,21 @@ df = pipeline.load_and_clean_data()
 pipeline.prepare_chunks_and_metadata(df)
 pipeline.build_faiss_index()
 
-# User query
-user_query = "Who is the first philosopher?"
-built_prompt = pipeline.build_prompt(user_query)
+# Example queries and their true answers (Ground truth)
+queries = [
+    "Who is the first philosopher?",
+    "What is existentialism?",
+    # Add more queries as needed
+]
+
+# True labels or true answers for your queries
+y_true = [
+    "Thales of Miletus",
+    "A philosophical theory emphasizing individual existence, freedom, and choice.",
+    # Add corresponding true answers
+]
+
+y_pred = []
 
 # Initialize LLaMA silently
 with open(os.devnull, 'w') as fnull:
@@ -30,7 +42,15 @@ with open(os.devnull, 'w') as fnull:
             verbose=False
         )
 
-# Generate response
-response = llm(built_prompt, max_tokens=200)
-print("\n=== Answer ===")
-print(response['choices'][0]['text'].strip())
+# Generate predictions for each query
+for query in queries:
+    built_prompt = pipeline.build_prompt(query)
+    response = llm(built_prompt, max_tokens=200)
+    prediction = response['choices'][0]['text'].strip() # type: ignore
+    y_pred.append(prediction)
+    print(f"\n=== Answer to '{query}' ===")
+    print(prediction)
+
+# Compute and print evaluation metrics (assuming text-based evaluation)
+metrics = compute_metrics(y_true, y_pred)
+print_metrics(metrics)
