@@ -3,8 +3,15 @@ import contextlib
 from llama_cpp import Llama
 from Pipeline.philosophy_pipeline import PhilosophyPipeline
 
+# Get base dir where main.py is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Build relative paths
+csv_path = os.path.join(BASE_DIR, "Data", "philosophy_data.csv")
+model_path = os.path.join(BASE_DIR, "Models", "Llama-3.2-3B-Instruct-Q4_K_M.gguf")
+
 # Load and process the dataset
-pipeline = PhilosophyPipeline("C:\\Users\\Lenovo\\PycharmProjects\\FMLProject\\Project\\Data\\philosophy_data.csv")
+pipeline = PhilosophyPipeline(csv_path)
 df = pipeline.load_and_clean_data()
 pipeline.prepare_chunks_and_metadata(df)
 pipeline.build_faiss_index()
@@ -17,7 +24,7 @@ built_prompt = pipeline.build_prompt(user_query)
 with open(os.devnull, 'w') as fnull:
     with contextlib.redirect_stderr(fnull):
         llm = Llama(
-            model_path="C:\\Users\\Lenovo\\models\\Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+            model_path=model_path,
             verbose=False
         )
 
