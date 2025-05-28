@@ -1,7 +1,9 @@
 import os
 import contextlib
 from llama_cpp import Llama
+
 from Pipeline.philosophy_pipeline import PhilosophyPipeline
+
 
 # Get base dir where main.py is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

@@ -1,1 +1,2 @@
-import philosophy_pipeline, rag_prompt_builder
+from Pipeline.philosophy_pipeline import PhilosophyPipeline
+from Pipeline.rag_prompt_builder import build_prompt
