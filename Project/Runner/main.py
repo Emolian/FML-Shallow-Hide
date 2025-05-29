@@ -55,10 +55,24 @@ y_true = [
 ]
 
 example_pairs = [
-    ("What is Plato's theory of forms?", "Plato believed in a world of ideal forms, which physical objects imperfectly reflect."),
-    ("What does Aristotle mean by 'final cause'?", "It refers to the purpose or end for which something exists."),
-    ("What is the meaning of 'Cogito, ergo sum'?", "It means 'I think, therefore I am' — Descartes' proof of existence.")
+    (
+        "According to Plato, what is the difference between the world of forms and the physical world?",
+        "Plato argues that the world of forms is a realm of perfect, abstract concepts that exist independently of time and space, while the physical world contains only imperfect reflections of these forms."
+    ),
+    (
+        "What is Aristotle's notion of the 'final cause'?",
+        "Aristotle identifies the final cause as the purpose or end for which a thing exists. For example, the final cause of a seed is to become a fully grown tree."
+    ),
+    (
+        "How does Descartes justify the statement 'I think, therefore I am'?",
+        "Descartes justifies it by arguing that even if he doubts everything, the very act of doubting confirms his existence as a thinking being. This forms the foundation of his epistemology."
+    ),
+    (
+        "Can the concept of 'Dasein' be defined using the provided context?",
+        "The context does not provide a direct answer."
+    )
 ]
+
 
 # Run LLM over queries
 y_pred = []
