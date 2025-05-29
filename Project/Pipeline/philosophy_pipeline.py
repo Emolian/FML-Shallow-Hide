@@ -6,7 +6,7 @@ import faiss
 import numpy as np
 
 class PhilosophyPipeline:
-    def __init__(self, csv_path, embedding_model='all-MiniLM-L6-v2', chunk_size=5):
+    def __init__(self, csv_path, embedding_model='all-MiniLM-L6-v2', chunk_size=3):
         self.csv_path = csv_path
         self.chunk_size = chunk_size
         self.embedding_model = SentenceTransformer(embedding_model)
@@ -64,10 +64,24 @@ class PhilosophyPipeline:
         distances, indices = self.index.search(np.array(query_vec), top_k)
         return [self.chunks[i] for i in indices[0]], [self.metadata[i] for i in indices[0]]
 
-    def build_prompt(self, user_query):
-        context_chunks, _ = self.retrieve_context(user_query)
-        context = "\n".join(context_chunks)
+    def build_prompt(self, user_query, max_context_tokens=350):
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
+
+        context_chunks, _ = self.retrieve_context(user_query, top_k=5)
+
+        total_tokens = 0
+        selected_chunks = []
+        for chunk in context_chunks:
+            chunk_tokens = len(tokenizer.encode(chunk, add_special_tokens=False))
+            if total_tokens + chunk_tokens > max_context_tokens:
+                break
+            selected_chunks.append(chunk)
+            total_tokens += chunk_tokens
+
+        context = "\n".join(selected_chunks)
         return f"""Context: \n\n{context}\n\nQuestion: \n\n{user_query}\n\nAnswer:\n\n"""
+
 
 
 

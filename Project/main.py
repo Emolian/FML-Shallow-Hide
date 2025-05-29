@@ -20,17 +20,32 @@ pipeline.build_faiss_index()
 
 # Example queries and their true answers (Ground truth)
 queries = [
-    "Who is the first philosopher?",
-    "What is existentialism?",
-    # Add more queries as needed
+    "What did Plato mean by the world of forms (ideas)?",
+    "How does Aristotle define causality?",
+    "What does Descartes mean by 'I think, therefore I am'?",
+    "What is the Stoic view of virtue and happiness?",
+    "What is Nietzsche’s concept of the will to power?",
+    "How does Sartre define human freedom?",
+    "What is 'Dasein' in Heidegger's philosophy?",
+    "What critique does Kant offer against empiricism?",
+    "What is the dialectical method according to Hegel?",
+    "What are the differences between utilitarianism and deontology?"
 ]
 
-# True labels or true answers for your queries
 y_true = [
-    "Thales of Miletus",
-    "A philosophical theory emphasizing individual existence, freedom, and choice.",
-    # Add corresponding true answers
+    "Plato's world of forms refers to a realm of perfect, immutable concepts or ideals that exist independently of the physical world. Physical objects are merely imperfect copies of these forms.",
+    "Aristotle defined four causes: material, formal, efficient, and final. He believed understanding something requires knowing all four causes, especially the final cause, or its purpose.",
+    "Descartes’ statement 'Cogito, ergo sum' asserts that the act of thinking proves the existence of the self as a thinking being.",
+    "Stoics believed that virtue is the only true good and that happiness (eudaimonia) is achieved by living in accordance with reason and nature.",
+    "Nietzsche’s will to power is the fundamental driving force in humans, an instinct to grow, assert control, and overcome obstacles.",
+    "Sartre defined freedom as the core of human existence; individuals are condemned to be free and bear full responsibility for their choices.",
+    "In Heidegger’s philosophy, Dasein refers to the human being as a being that is aware of and questions its own existence.",
+    "Kant argued that while knowledge begins with experience, not all knowledge arises from experience; the mind structures experience through a priori concepts.",
+    "Hegel’s dialectical method involves a triadic process: thesis, antithesis, and synthesis, through which reality and ideas evolve.",
+    "Utilitarianism judges actions by their consequences and seeks the greatest good for the greatest number, while deontology judges actions by whether they follow moral rules or duties."
 ]
+
+
 
 y_pred = []
 
@@ -45,7 +60,7 @@ with open(os.devnull, 'w') as fnull:
 # Generate predictions for each query
 for query in queries:
     built_prompt = pipeline.build_prompt(query)
-    response = llm(built_prompt, max_tokens=200)
+    response = llm(built_prompt, max_tokens=256)
     prediction = response['choices'][0]['text'].strip() # type: ignore
     y_pred.append(prediction)
     print(f"\n=== Answer to '{query}' ===")
@@ -54,3 +69,4 @@ for query in queries:
 # Compute and print evaluation metrics
 metrics = compute_metrics(y_true, y_pred)
 print_metrics(metrics)
+
