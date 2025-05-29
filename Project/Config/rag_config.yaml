@@ -3,5 +3,5 @@ retrieval:
   top_k: 5
   max_context_tokens: 350
   embedding_model: sentence-transformers/all-MiniLM-L6-v2
-  faiss_index_path: embeddings/index.faiss
-  metadata_path: embeddings/metadata.json
+  faiss_index_path: Embeddings/index.faiss
+  metadata_path: Embeddings/metadata.json
