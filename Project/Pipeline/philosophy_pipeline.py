@@ -60,12 +60,14 @@ class PhilosophyPipeline:
 
         return [self.chunks[i] for i in valid_indices], [self.metadata[i] for i in valid_indices]
 
-    def build_prompt(self, user_query):
+    def build_prompt(self, user_query, examples=None, role=None, instruction=None):
         from transformers import AutoTokenizer
         tokenizer = AutoTokenizer.from_pretrained(self.config["retrieval"]["embedding_model"])
 
+        # Retrieve relevant context
         context_chunks, _ = self.retrieve_context(user_query)
 
+        # Limit context tokens
         total_tokens = 0
         selected_chunks = []
         for chunk in context_chunks:
@@ -74,9 +76,41 @@ class PhilosophyPipeline:
                 break
             selected_chunks.append(chunk)
             total_tokens += chunk_tokens
-
         context = "\n".join(selected_chunks)
-        return f"""Context:\n\n{context}\n\nQuestion:\n\n{user_query}\n\nAnswer:\n\n"""
+
+        # Set default role and instruction
+        role = role or "You are an expert philosophy assistant trained to provide accurate and concise answers."
+        instruction = instruction or (
+            "Use only the context provided below to answer the question. "
+            "Do not speculate or invent facts. If the answer cannot be found in the context, reply with: "
+            "'The context does not provide a direct answer.'"
+        )
+
+        # Format few-shot examples
+        example_section = ""
+        if examples:
+            formatted = [
+                f"Q: {q}\nA: {a}"
+                for q, a in examples
+            ]
+            example_section = "### Examples:\n" + "\n\n".join(formatted) + "\n"
+
+        # Build final structured prompt
+        prompt = f"""### Role:
+    {role}
+
+    ### Instruction:
+    {instruction}
+
+    {example_section}### Context:
+    {context}
+
+    ### Question:
+    {user_query}
+
+    ### Answer:"""
+
+        return prompt.strip()
 
     def save_index_and_metadata(self):
         os.makedirs(os.path.dirname(self.index_path), exist_ok=True)

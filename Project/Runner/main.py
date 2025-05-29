@@ -54,10 +54,23 @@ y_true = [
     "Utilitarianism judges actions by their consequences and seeks the greatest good for the greatest number, while deontology judges actions by whether they follow moral rules or duties."
 ]
 
+example_pairs = [
+    ("What is Plato's theory of forms?", "Plato believed in a world of ideal forms, which physical objects imperfectly reflect."),
+    ("What does Aristotle mean by 'final cause'?", "It refers to the purpose or end for which something exists."),
+    ("What is the meaning of 'Cogito, ergo sum'?", "It means 'I think, therefore I am' — Descartes' proof of existence.")
+]
+
 # Run LLM over queries
 y_pred = []
 for query in queries:
-    prompt = pipeline.build_prompt(query)
+    example_pairs = [
+        ("What is Plato's theory of forms?",
+         "Plato believed in a world of ideal forms, which physical objects imperfectly reflect."),
+        ("What does Aristotle mean by 'final cause'?", "It refers to the purpose or end for which something exists."),
+        ("What is the meaning of 'Cogito, ergo sum'?",
+         "It means 'I think, therefore I am' — Descartes' proof of existence.")
+    ]
+    prompt = pipeline.build_prompt(query, examples=example_pairs)
     answer = llm.generate(prompt)
     y_pred.append(answer)
     print(f"\n=== Answer to '{query}' ===")
