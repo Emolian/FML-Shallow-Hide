@@ -1,6 +1,6 @@
 retrieval:
-  chunk_size: 3
-  top_k: 5
+  chunk_size: 4
+  top_k: 7
   max_context_tokens: 350
   embedding_model: sentence-transformers/all-MiniLM-L6-v2
   faiss_index_path: Embeddings/index.faiss

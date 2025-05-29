@@ -76,39 +76,39 @@ class PhilosophyPipeline:
                 break
             selected_chunks.append(chunk)
             total_tokens += chunk_tokens
-        context = "\n".join(selected_chunks)
 
-        # Set default role and instruction
-        role = role or "You are an expert philosophy assistant trained to provide accurate and concise answers."
+        context = "\n".join([f"{i + 1}. {c}" for i, c in enumerate(selected_chunks)])
+
+        # Default role and instruction
+        role = role or "You are a knowledgeable philosophy assistant. Your answers must be faithful to the provided context."
         instruction = instruction or (
-            "Use only the context provided below to answer the question. "
-            "Do not speculate or invent facts. If the answer cannot be found in the context, reply with: "
-            "'The context does not provide a direct answer.'"
+            "Answer the user's question using ONLY the provided context. "
+            "If the context does not contain enough information, say exactly: "
+            "'The context does not provide a direct answer.'\n\n"
+            "Do not make up information, even if the answer seems obvious. "
+            "Do not repeat the question. Be concise, accurate, and grounded."
         )
 
-        # Format few-shot examples
+        # Few-shot examples
         example_section = ""
         if examples:
-            formatted = [
-                f"Q: {q}\nA: {a}"
-                for q, a in examples
-            ]
-            example_section = "### Examples:\n" + "\n\n".join(formatted) + "\n"
+            formatted = [f"Q: {q}\nA: {a}" for q, a in examples]
+            example_section = "### Few-shot Examples\n" + "\n\n".join(formatted) + "\n\n"
 
-        # Build final structured prompt
-        prompt = f"""### Role:
+        # Final prompt
+        prompt = f"""### Role
     {role}
 
-    ### Instruction:
+    ### Instruction
     {instruction}
 
-    {example_section}### Context:
+    {example_section}### Context
     {context}
 
-    ### Question:
+    ### Question
     {user_query}
 
-    ### Answer:"""
+    ### Answer"""
 
         return prompt.strip()
 

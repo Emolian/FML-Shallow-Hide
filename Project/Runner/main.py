@@ -2,7 +2,8 @@ import os
 from Evaluator.metrics import compute_metrics, print_metrics
 from Runner.llama_wrapper import LlamaWrapper
 from Pipeline.philosophy_pipeline import PhilosophyPipeline
-
+from Guardrails.toxicity_filter import ToxicityChecker
+from Guardrails.hallucination_checker import HallucinationChecker
 # Base directory (Project/)
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -14,10 +15,12 @@ config_path_rag = os.path.join(BASE_DIR, "Config", "rag_config.yaml")
 # Initialize pipeline and model
 pipeline = PhilosophyPipeline(csv_path, config_path=config_path_rag)
 llm = LlamaWrapper(config_path=config_path_model)
+hallucination_checker = HallucinationChecker(threshold=0.15)
+toxicity_checker = ToxicityChecker(llm=llm)
 
 # Check if FAISS index and metadata already exist
 if os.path.exists(pipeline.index_path) and os.path.exists(pipeline.meta_path):
-    print("🔄 Loading FAISS index and metadata from disk...")
+    print("\U0001F501 Loading FAISS index and metadata from disk...")
     pipeline.load_index_and_metadata()
 else:
     print("⚙️ Building FAISS index and metadata from scratch...")
@@ -42,54 +45,50 @@ queries = [
 
 # Ground-truth answers
 y_true = [
-    "Plato's world of forms refers to a realm of perfect, immutable concepts or ideals that exist independently of the physical world. Physical objects are merely imperfect copies of these forms.",
-    "Aristotle defined four causes: material, formal, efficient, and final. He believed understanding something requires knowing all four causes, especially the final cause, or its purpose.",
-    "Descartes’ statement 'Cogito, ergo sum' asserts that the act of thinking proves the existence of the self as a thinking being.",
-    "Stoics believed that virtue is the only true good and that happiness (eudaimonia) is achieved by living in accordance with reason and nature.",
-    "Nietzsche’s will to power is the fundamental driving force in humans, an instinct to grow, assert control, and overcome obstacles.",
-    "Sartre defined freedom as the core of human existence; individuals are condemned to be free and bear full responsibility for their choices.",
-    "In Heidegger’s philosophy, Dasein refers to the human being as a being that is aware of and questions its own existence.",
-    "Kant argued that while knowledge begins with experience, not all knowledge arises from experience; the mind structures experience through a priori concepts.",
-    "Hegel’s dialectical method involves a triadic process: thesis, antithesis, and synthesis, through which reality and ideas evolve.",
-    "Utilitarianism judges actions by their consequences and seeks the greatest good for the greatest number, while deontology judges actions by whether they follow moral rules or duties."
+    "Plato believed that the physical world is a shadow of a higher world of Forms—eternal, perfect ideals.",
+    "Aristotle identified four causes—material, formal, efficient, and final—to explain why things exist or change.",
+    "Descartes’ phrase 'Cogito, ergo sum' means that thinking is the proof of one's own existence.",
+    "For Stoics, virtue is the only true good, and happiness comes from living according to reason and nature.",
+    "Nietzsche’s 'will to power' is a fundamental drive behind human ambition, creativity, and overcoming challenges.",
+    "Sartre argued that human freedom means we are condemned to choose, with no predefined essence or nature.",
+    "'Dasein' is Heidegger's term for human existence, defined by being aware of and questioning one’s own being.",
+    "Kant critiqued empiricism by asserting that knowledge arises from both sensory input and rational categories.",
+    "Hegel’s dialectic method involves thesis, antithesis, and synthesis to explain the evolution of ideas and reality.",
+    "Utilitarianism judges actions by consequences, aiming at happiness; deontology judges by adherence to moral duty."
 ]
+
 
 example_pairs = [
-    (
-        "According to Plato, what is the difference between the world of forms and the physical world?",
-        "Plato argues that the world of forms is a realm of perfect, abstract concepts that exist independently of time and space, while the physical world contains only imperfect reflections of these forms."
-    ),
-    (
-        "What is Aristotle's notion of the 'final cause'?",
-        "Aristotle identifies the final cause as the purpose or end for which a thing exists. For example, the final cause of a seed is to become a fully grown tree."
-    ),
-    (
-        "How does Descartes justify the statement 'I think, therefore I am'?",
-        "Descartes justifies it by arguing that even if he doubts everything, the very act of doubting confirms his existence as a thinking being. This forms the foundation of his epistemology."
-    ),
-    (
-        "Can the concept of 'Dasein' be defined using the provided context?",
-        "The context does not provide a direct answer."
-    )
+    ("What is Plato's theory of forms?",
+     "Plato believed in a world of ideal forms, which physical objects imperfectly reflect."),
+    ("What does Aristotle mean by 'final cause'?", "It refers to the purpose or end for which something exists."),
+    ("What is the meaning of 'Cogito, ergo sum'?",
+     "It means 'I think, therefore I am' — Descartes' proof of existence.")
 ]
 
-
-# Run LLM over queries
 y_pred = []
 for query in queries:
-    example_pairs = [
-        ("What is Plato's theory of forms?",
-         "Plato believed in a world of ideal forms, which physical objects imperfectly reflect."),
-        ("What does Aristotle mean by 'final cause'?", "It refers to the purpose or end for which something exists."),
-        ("What is the meaning of 'Cogito, ergo sum'?",
-         "It means 'I think, therefore I am' — Descartes' proof of existence.")
-    ]
-    prompt = pipeline.build_prompt(query, examples=example_pairs)
-    answer = llm.generate(prompt)
+    for attempt in range(3):  # Retry up to 3 times
+        prompt = pipeline.build_prompt(query, examples=example_pairs)
+        answer = llm.generate(prompt)
+
+        context_chunks, _ = pipeline.retrieve_context(query)
+        is_hallucinated, similarity = hallucination_checker.is_hallucinated(context_chunks, answer)
+        is_toxic = toxicity_checker.is_toxic(answer)
+
+        if is_hallucinated:
+            print(f"\u26a0\ufe0f Hallucination detected (sim={similarity:.3f}), regenerating...")
+        elif is_toxic:
+            print("\u26a0\ufe0f Toxic response detected, regenerating...")
+        else:
+            break  # Valid output
+
     y_pred.append(answer)
     print(f"\n=== Answer to '{query}' ===")
     print(answer)
+    print(f"Hallucination: {'YES' if is_hallucinated else 'NO'} (sim={similarity:.3f})")
+    print(f"Toxic: {'YES' if is_toxic else 'NO'}")
 
-# Evaluate results
+# Evaluate
 metrics = compute_metrics(y_true, y_pred)
 print_metrics(metrics)
