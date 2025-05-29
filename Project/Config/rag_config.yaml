@@ -1,5 +1,5 @@
 retrieval:
-  chunk_size: 4
+  chunk_size: 6
   top_k: 7
   max_context_tokens: 350
   embedding_model: sentence-transformers/all-MiniLM-L6-v2

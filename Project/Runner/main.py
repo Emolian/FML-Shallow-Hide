@@ -92,3 +92,31 @@ for query in queries:
 # Evaluate
 metrics = compute_metrics(y_true, y_pred)
 print_metrics(metrics)
+
+# === Interactive Chatbot Mode ===
+print("\n🤖 Entering interactive chatbot mode. Ask philosophical questions (type 'exit' to quit):\n")
+
+while True:
+    user_input = input("🧠 You: ").strip()
+    if user_input.lower() in {"exit", "quit"}:
+        print("👋 Goodbye!")
+        break
+
+    for attempt in range(3):
+        prompt = pipeline.build_prompt(user_input, examples=example_pairs)
+        answer = llm.generate(prompt)
+
+        context_chunks, _ = pipeline.retrieve_context(user_input)
+        is_hallucinated, similarity = hallucination_checker.is_hallucinated(context_chunks, answer)
+        is_toxic = toxicity_checker.is_toxic(answer)
+
+        if is_hallucinated:
+            print(f"\u26a0\ufe0f Hallucination detected (sim={similarity:.3f}), regenerating...")
+        elif is_toxic:
+            print("\u26a0\ufe0f Toxic response detected, regenerating...")
+        else:
+            break
+
+    print(f"\n🧭 Context-based Answer:\n{answer}")
+    print(f"Hallucination: {'YES' if is_hallucinated else 'NO'} (sim={similarity:.3f})")
+    print(f"Toxic: {'YES' if is_toxic else 'NO'}\n")

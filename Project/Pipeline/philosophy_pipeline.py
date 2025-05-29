@@ -96,19 +96,28 @@ class PhilosophyPipeline:
             example_section = "### Few-shot Examples\n" + "\n\n".join(formatted) + "\n\n"
 
         # Final prompt
-        prompt = f"""### Role
-    {role}
+        prompt = f"""### SYSTEM ROLE
+    You are a highly knowledgeable and precise assistant in philosophy. You must **only** use the context provided to answer the user's question. Any answer outside this context is considered incorrect.
 
-    ### Instruction
-    {instruction}
+    ### INSTRUCTIONS
+    - Read the user’s question.
+    - Search for relevant information **only** in the context section.
+    - If no relevant information is found, respond with:  
+      **The context does not provide a direct answer.**
+    - **Never fabricate facts.**
+    - Do not repeat the question.
+    - Keep your answer brief, factual, and grounded.
 
-    {example_section}### Context
-    {context}
+    ### FEW-SHOT EXAMPLES
+    {example_section if example_section else "None"}
 
-    ### Question
+    ### CONTEXT
+    {context if context else "No context found."}
+
+    ### QUESTION
     {user_query}
 
-    ### Answer"""
+    ### ANSWER"""
 
         return prompt.strip()
 
