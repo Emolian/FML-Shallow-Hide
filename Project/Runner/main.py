@@ -15,10 +15,16 @@ config_path_rag = os.path.join(BASE_DIR, "Config", "rag_config.yaml")
 pipeline = PhilosophyPipeline(csv_path, config_path=config_path_rag)
 llm = LlamaWrapper(config_path=config_path_model)
 
-# Load and process data
-df = pipeline.load_and_clean_data()
-pipeline.prepare_chunks_and_metadata(df)
-pipeline.build_faiss_index()
+# Check if FAISS index and metadata already exist
+if os.path.exists(pipeline.index_path) and os.path.exists(pipeline.meta_path):
+    print("🔄 Loading FAISS index and metadata from disk...")
+    pipeline.load_index_and_metadata()
+else:
+    print("⚙️ Building FAISS index and metadata from scratch...")
+    df = pipeline.load_and_clean_data()
+    pipeline.prepare_chunks_and_metadata(df)
+    pipeline.build_faiss_index()
+    pipeline.save_index_and_metadata()
 
 # Example queries
 queries = [
@@ -34,7 +40,7 @@ queries = [
     "What are the differences between utilitarianism and deontology?"
 ]
 
-# Ground truth
+# Ground-truth answers
 y_true = [
     "Plato's world of forms refers to a realm of perfect, immutable concepts or ideals that exist independently of the physical world. Physical objects are merely imperfect copies of these forms.",
     "Aristotle defined four causes: material, formal, efficient, and final. He believed understanding something requires knowing all four causes, especially the final cause, or its purpose.",

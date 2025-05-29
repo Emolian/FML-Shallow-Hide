@@ -35,16 +35,30 @@ class PhilosophyPipeline:
         return df
 
     def _load_config(self, path):
+        import yaml
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
         if not os.path.isabs(path):
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            path = os.path.normpath(os.path.join(base_dir, "..", path))
+            path = os.path.normpath(os.path.join(base_dir, path))
+
         with open(path, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            config = yaml.safe_load(f)
+
+        if "retrieval" in config:
+            retrieval_cfg = config["retrieval"]
+            retrieval_cfg["faiss_index_path"] = os.path.normpath(
+                os.path.join(base_dir, retrieval_cfg["faiss_index_path"]))
+            retrieval_cfg["metadata_path"] = os.path.normpath(os.path.join(base_dir, retrieval_cfg["metadata_path"]))
+
+        return config
 
     def retrieve_context(self, query):
         query_vec = self.embedding_model.encode([query])
         distances, indices = self.index.search(np.array(query_vec), self.top_k)
-        return [self.chunks[i] for i in indices[0]], [self.metadata[i] for i in indices[0]]
+
+        valid_indices = [i for i in indices[0] if i < len(self.chunks)]
+
+        return [self.chunks[i] for i in valid_indices], [self.metadata[i] for i in valid_indices]
 
     def build_prompt(self, user_query):
         from transformers import AutoTokenizer
@@ -96,11 +110,16 @@ class PhilosophyPipeline:
                 })
 
     def build_faiss_index(self):
-        import faiss
         embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=True)
         dimension = embeddings.shape[1]
         self.index = faiss.IndexFlatL2(dimension)
         self.index.add(np.array(embeddings))
+        self.save_index_and_metadata()
+
+
+
+
+
 
 
 
