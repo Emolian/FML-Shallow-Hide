@@ -1,20 +1,32 @@
 import os
 import json
+import yaml
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 
 class PhilosophyPipeline:
-    def __init__(self, csv_path, embedding_model='all-MiniLM-L6-v2', chunk_size=3):
+    def __init__(self, csv_path, config_path="Config/rag_config.yaml"):
         self.csv_path = csv_path
-        self.chunk_size = chunk_size
-        self.embedding_model = SentenceTransformer(embedding_model)
+        self.config = self._load_config(config_path)
+
+
+        self.chunk_size = self.config["retrieval"]["chunk_size"]
+        self.top_k = self.config["retrieval"]["top_k"]
+        self.max_context_tokens = self.config["retrieval"]["max_context_tokens"]
+        self.index_path = self.config["retrieval"]["faiss_index_path"]
+        self.meta_path = self.config["retrieval"]["metadata_path"]
+
+        model_name = self.config["retrieval"]["embedding_model"]
+        self.embedding_model = SentenceTransformer(model_name)
+
         self.chunks = []
         self.metadata = []
         self.index = None
 
     def load_and_clean_data(self):
+        import pandas as pd
         df = pd.read_csv(self.csv_path)
         df = df.dropna(subset=["sentence_str"])
         df['sentence'] = df['sentence_str'].str.strip()
@@ -22,11 +34,52 @@ class PhilosophyPipeline:
         df['school'] = df['school'].str.strip().str.lower()
         return df
 
+    def _load_config(self, path):
+        if not os.path.isabs(path):
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            path = os.path.normpath(os.path.join(base_dir, "..", path))
+        with open(path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+
+    def retrieve_context(self, query):
+        query_vec = self.embedding_model.encode([query])
+        distances, indices = self.index.search(np.array(query_vec), self.top_k)
+        return [self.chunks[i] for i in indices[0]], [self.metadata[i] for i in indices[0]]
+
+    def build_prompt(self, user_query):
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(self.config["retrieval"]["embedding_model"])
+
+        context_chunks, _ = self.retrieve_context(user_query)
+
+        total_tokens = 0
+        selected_chunks = []
+        for chunk in context_chunks:
+            chunk_tokens = len(tokenizer.encode(chunk, add_special_tokens=False))
+            if total_tokens + chunk_tokens > self.max_context_tokens:
+                break
+            selected_chunks.append(chunk)
+            total_tokens += chunk_tokens
+
+        context = "\n".join(selected_chunks)
+        return f"""Context:\n\n{context}\n\nQuestion:\n\n{user_query}\n\nAnswer:\n\n"""
+
+    def save_index_and_metadata(self):
+        os.makedirs(os.path.dirname(self.index_path), exist_ok=True)
+        faiss.write_index(self.index, self.index_path)
+        with open(self.meta_path, "w", encoding="utf-8") as f:
+            json.dump(self.metadata, f, indent=2)
+
+    def load_index_and_metadata(self):
+        self.index = faiss.read_index(self.index_path)
+        with open(self.meta_path, "r", encoding="utf-8") as f:
+            self.metadata = json.load(f)
+
     def chunk_sentences(self, group):
         chunks = []
         sentences = group['sentence'].tolist()
         for i in range(0, len(sentences), self.chunk_size):
-            chunk = " ".join(sentences[i:i+self.chunk_size])
+            chunk = " ".join(sentences[i:i + self.chunk_size])
             chunks.append(chunk)
         return chunks
 
@@ -43,47 +96,11 @@ class PhilosophyPipeline:
                 })
 
     def build_faiss_index(self):
+        import faiss
         embeddings = self.embedding_model.encode(self.chunks, show_progress_bar=True)
         dimension = embeddings.shape[1]
         self.index = faiss.IndexFlatL2(dimension)
         self.index.add(np.array(embeddings))
-
-    def save_index_and_metadata(self, index_path="embeddings/index.faiss", meta_path="embeddings/metadata.json"):
-        os.makedirs(os.path.dirname(index_path), exist_ok=True)
-        faiss.write_index(self.index, index_path)
-        with open(meta_path, "w", encoding="utf-8") as f:
-            json.dump(self.metadata, f, indent=2)
-
-    def load_index_and_metadata(self, index_path="embeddings/index.faiss", meta_path="embeddings/metadata.json"):
-        self.index = faiss.read_index(index_path)
-        with open(meta_path, "r", encoding="utf-8") as f:
-            self.metadata = json.load(f)
-
-    def retrieve_context(self, query, top_k=3):
-        query_vec = self.embedding_model.encode([query])
-        distances, indices = self.index.search(np.array(query_vec), top_k)
-        return [self.chunks[i] for i in indices[0]], [self.metadata[i] for i in indices[0]]
-
-    def build_prompt(self, user_query, max_context_tokens=350):
-        from transformers import AutoTokenizer
-        tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
-
-        context_chunks, _ = self.retrieve_context(user_query, top_k=5)
-
-        total_tokens = 0
-        selected_chunks = []
-        for chunk in context_chunks:
-            chunk_tokens = len(tokenizer.encode(chunk, add_special_tokens=False))
-            if total_tokens + chunk_tokens > max_context_tokens:
-                break
-            selected_chunks.append(chunk)
-            total_tokens += chunk_tokens
-
-        context = "\n".join(selected_chunks)
-        return f"""Context: \n\n{context}\n\nQuestion: \n\n{user_query}\n\nAnswer:\n\n"""
-
-
-
 
 
 
