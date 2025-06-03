@@ -44,8 +44,9 @@ Project/
 
 ## 👨‍💻 Author
 
-Pal Ioan Emilian
-Mihalcea Andrei-Cristian 
+- Pal Ioan Emilian 
+- Mihalcea Andrei-Cristian
+
 Bachelor Students in Artificial Intelligence – Babeș-Bolyai University
 
 ## 📄 License
